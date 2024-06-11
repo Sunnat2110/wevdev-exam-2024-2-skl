@@ -1,49 +1,106 @@
 {% extends "base.html" %}
+{% from '/pagination.html' import pagination %}
 
 {% block content %}
 <main class="main">
-    <div class="container mt-5">
-        <h2>Список книг</h2>
-        <div class="row">
-            {% for book in books %}
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ book.title }}</h5>
-                        <p class="card-text">Год: {{ book.year }}</p>
-                        <p class="card-text">Средняя оценка: {{ book.avg_rating | default('Нет оценок') }}</p>
-                        <p class="card-text">Количество рецензий: {{ book.review_count }}</p>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+  <div class="about text-center">
+    <h1>Добро пожаловать в нашу электронную библиотеку!</h1>
+    <p>Мы рады приветствовать вас в нашей электронной библиотеке, где вы найдете богатую коллекцию книг на любой
+      вкус. Наша библиотека создана для того, чтобы сделать чтение доступным, удобным и увлекательным.</p>
+  </div>
+  <div class="container about-image"></div>
+  <hr class="heading-line mx-auto">
+  <div class="adventages">
+    <section>
+      <div class="container">
+        <h2 class="text-center">Преимущества нашей библиотеки</h2>
+        <div class="row text-center">
+          <!-- Преимущества -->
+          <div class="col-lg-4">
+            <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
+            <p>Широкий ассортимент книг:<strong> В нашей библиотеке представлено множество жанров и авторов,
+              чтобы каждый мог найти что-то интересное для себя.</strong></p>
+          </div>
+          <div class="col-lg-4">
+            <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
+            <p>Легкий поиск:<strong>Удобная система поиска позволяет быстро находить нужные книги по
+              названию, автору или жанру.</strong></p>
+          </div>
+          <div class="col-lg-4">
+            <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
+            <p><strong>Отзывы и рецензии:</strong> Возможность оставлять отзывы и рецензии помогает пользователям
+              делиться своими впечатлениями и находить лучшие книги по рекомендациям других читателей. </p>
+          </div>
+          <div class="col-lg-4">
+            <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
+            <p><strong>Доступ в любое время:</strong> Наша библиотека доступна 24/7, поэтому вы можете читать книги в
+              любое удобное для вас время. </p>
+          </div>
+          <div class="col-lg-4">
+            <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
+            <p><strong>Интуитивно понятный интерфейс:</strong> Простой и удобный интерфейс делает использование нашей
+              библиотеки легким и приятным даже для тех, кто не очень хорошо разбирается в технологиях. </p>
+          </div>
+          <div class="col-lg-4">
+            <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
+            <p><strong>Обновление коллекции:</strong> Мы постоянно обновляем нашу коллекцию, добавляя новые книги и
+              материалы, чтобы вы всегда могли найти что-то новое и интересное.</p>
+          </div>
         </div>
-
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                {% if page > 1 %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('index', page=page-1) }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                {% endif %}
-
-                {% for p in range(1, total_pages + 1) %}
-                <li class="page-item {% if p == page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('index', page=p) }}">{{ p }}</a>
-                </li>
-                {% endfor %}
-
-                {% if page < total_pages %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('index', page=page+1) }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+      </div>
+    </section>
+  </div>
+  <hr class="heading-line mx-auto">
+  <div class="container mt-5">
+    <h2 class="text-center">Список книг</h2>
+    <div class="row">
+      {% for book in books %}
+      <div class="col-md-12">
+        <div class="card mb-4 d-flex flex-row">
+          <div class="card-body">
+            <div class="row">
+            <div class="col-md-4 book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});">
+            </div>
+              <div class="col-md-8">
+                <h5 class="card-title"><strong>{{ book.title }}</strong></h5>
+                <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>
+                <p class="card-text"><strong>Год:</strong> {{ book.year }}</p>
+                <p class="card-text"><strong>Жанр:</strong> {{ book.genres }}</p>
+                <p class="card-text"><strong>Средняя оценка:</strong> {{ book.avg_rating | default('Нет оценок') }}</p>
+                <p class="card-text"><strong>Количество рецензий:</strong> {{ book.review_count }}</p>
+                <p class="card-text"><strong>Описание:</strong> {{ book.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
     </div>
+
+    <!-- Пагинация -->
+    {{ pagination(total_pages, page) }}
+  </div>
 </main>
+<style>
+  .about-image {
+    background-image: url("{{ url_for('static', filename='images/bg-image.jpg') }}");
+    height: 400px;
+    background-size: cover;
+    background-position: center;
+    padding: 20px;
+    color: white;
+    text-shadow: 1px 1px 2px black;
+  }
+  .book-cover {
+    width: 300px; /* Ширина обложки */
+    height: 500px; /* Высота обложки */
+    background-size: cover;
+    background-position: center;
+    margin-right: 20px; /* Отступ справа для разделения обложки и информации */
+}
+
+.card-body {
+    flex: 1; /* Занимает все доступное пространство внутри .d-flex */
+}
+</style>
 {% endblock %}

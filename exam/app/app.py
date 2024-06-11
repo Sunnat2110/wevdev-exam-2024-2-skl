@@ -1,133 +1,101 @@
-from typing import Dict
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from mysql_db import MySQL
-import mysql.connector
-from werkzeug.utils import secure_filename
-import re
+from flask import Flask, render_template, abort, send_from_directory, flash
+from flask_migrate import Migrate
+from models import Cover, Book, Review, Genre, BookGenre, db
+from auth import bp_auth as auth_bp, init_login_manager
+import math
+from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
+
 
 app = Flask(__name__)
-
 application = app
 
 app.config.from_pyfile('config.py')
 
-db = MySQL(app)
+db.init_app(app)
+migrate = Migrate(app, db)
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-login_manager.login_view = 'login'
-login_manager.login_message = 'Для доступа необходимо пройти аутентификацию'
-login_manager.login_message_category = 'warning'
+init_login_manager(app)
 
 
-class User(UserMixin):
-    def __init__(self, user_id, user_login):
-        self.id = user_id
-        self.login = user_login
+app.register_blueprint(auth_bp)
 
-@login_manager.user_loader
-def load_user(user_id):
-    query = 'SELECT id, login FROM users WHERE id = %s'
-
-    with db.connection().cursor(named_tuple=True) as cursor:
-        cursor.execute(query, (user_id,))
-        user = cursor.fetchone()
-
-        return User(user.id, user.login) if user else None
-
+@app.errorhandler(SQLAlchemyError)
+def handle_sqlalchemy_error(err):
+    error_msg = ('Возникла ошибка при подключении к базе данных. '
+                 'Повторите попытку позже.')
+    return f'{error_msg} (Подробнее: {err})', 500
 
 @app.route('/')
 @app.route('/page/<int:page>')
 def index(page=1):
-    per_page = 10  # Количество книг на одной странице
-    offset = (page - 1) * per_page
+    PER_PAGE = 10  # Количество книг на одной странице
+    try:
+        # Запрос для получения общего количества книг
+        total_books = db.session.query(func.count(Book.id)).scalar()
 
-    query = '''
-        SELECT books.id, books.title, books.publication_year, 
-               AVG(reviews.rating) as avg_rating, COUNT(reviews.id) as review_count
-        FROM books
-        LEFT JOIN reviews ON books.id = reviews.book_id
-        GROUP BY books.id
-        ORDER BY books.year DESC
-        LIMIT %s OFFSET %s
-    '''
-    
-    with db.connection().cursor(named_tuple=True) as cursor:
-        cursor.execute(query, (per_page, offset))
-        books = cursor.fetchall()
-    
-    # Подсчет общего количества книг для правильной работы пагинации
-    count_query = 'SELECT COUNT(*) as total_books FROM books'
-    with db.connection().cursor(named_tuple=True) as cursor:
-        cursor.execute(count_query)
-        total_books = cursor.fetchone().total_books
-    
-    total_pages = (total_books + per_page - 1) // per_page  # Общее количество страниц
-    
-    return render_template('index.html', books=books, page=page, total_pages=total_pages)
+        # Вычисление общего количества страниц
+        total_pages = math.ceil(total_books / PER_PAGE)
 
+        # Запрос для получения списка книг с учетом пагинации
+        books = db.session.query(
+            Book.id,
+            Book.title,
+            Book.description,
+            Book.publication_year.label('year'),
+            Book.publisher,
+            Book.author,
+            Book.pages,
+            Book.cover_id,
+            func.avg(Review.rating).label('avg_rating'),
+            func.count(Review.id).label('review_count'),
+            func.group_concat(Genre.name).label('genres')
+        ).outerjoin(Review, Book.id == Review.book_id)\
+        .outerjoin(BookGenre, Book.id == BookGenre.book_id)\
+        .outerjoin(Genre, BookGenre.genre_id == Genre.id)\
+        .group_by(Book.id)\
+        .order_by(Book.publication_year.desc())\
+        .limit(PER_PAGE).offset((page - 1) * PER_PAGE).all()
 
-@app.route('/login', methods=['POST', 'GET'])
-def login():
-    if request.method == 'POST':
-        login = request.form['login']
-        password = request.form['password']
-        check = request.form.get('secretcheck') == 'on'
+        return render_template('index.html', books=books, page=page, total_pages=total_pages)
+    except Exception as e:
+        flash('Произошла ошибка при загрузке книг: {}'.format(str(e)), 'danger')
+        return render_template('index.html', books=[], page=1, total_pages=1)
 
-        query = 'SELECT id, login FROM users WHERE login=%s AND password_hash=SHA2(%s, 256)'
+@app.route('/media/covers/<cover_id>')
+def image(cover_id):
+    cover = Cover.query.get(cover_id)
+    if cover is None:
+        abort(404)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], cover.file_name)
 
-        try:
-            with db.connection().cursor(named_tuple=True) as cursor:
-                cursor.execute(query, (login, password))
-                user = cursor.fetchone()
+# @app.route('/add_book', methods=['GET', 'POST'])
+# @login_required
+# def add_book():
+#     if request.method == 'POST':
+#         title = request.form['title']
+#         description = request.form['description']
+#         year = request.form['publication_year']
+#         publisher = request.form['publisher']
+#         author = request.form['author']
+#         page_count = request.form['pages']
+#         cover_id = request.form['cover_id']
 
-                if user:
-                    login_user(User(user.id, user.login), remember=check)
-                    next_url = request.args.get('next') or url_for('index')
-                    flash('Вы успешно вошли!', 'success')
-                    return redirect(next_url)
-                else:
-                    flash('Неверные учетные данные.', 'danger')
+#         query = """
+#             INSERT INTO books (title, description, publication_year, publisher, author, pages, cover_id)
+#             VALUES (%s, %s, %s, %s, %s, %s, %s)
+#         """
 
-        except mysql.connector.errors.DatabaseError:
-            flash('Произошла ошибка при входе.', 'danger')
+#         try:
+#             with db.connection().cursor() as cursor:
+#                 cursor.execute(query, (title, description, year, publisher, author, page_count, cover_id))
+#                 db.connection().commit()
+#                 flash('Книга успешно добавлена!', 'success')
+#                 return redirect(url_for('index'))
+#         except mysql.connector.errors.DatabaseError:
+#             flash('Произошла ошибка при добавлении книги.', 'danger')
 
-    return render_template('login.html')
-
-@app.route('/logout', methods=['GET'])
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
-
-@app.route('/add_book', methods=['GET', 'POST'])
-@login_required
-def add_book():
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        year = request.form['year']
-        publisher = request.form['publisher']
-        author = request.form['author']
-        page_count = request.form['page_count']
-        cover_id = request.form['cover_id']
-
-        query = """
-            INSERT INTO books (title, description, year, publisher, author, page_count, cover_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """
-
-        try:
-            with db.connection().cursor() as cursor:
-                cursor.execute(query, (title, description, year, publisher, author, page_count, cover_id))
-                db.connection().commit()
-                flash('Книга успешно добавлена!', 'success')
-                return redirect(url_for('index'))
-        except mysql.connector.errors.DatabaseError:
-            flash('Произошла ошибка при добавлении книги.', 'danger')
-
-    return render_template('add_book.html')
+#     return render_template('add_book.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

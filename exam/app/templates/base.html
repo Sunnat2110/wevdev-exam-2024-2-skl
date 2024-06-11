@@ -26,7 +26,19 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ms-auto">
-                        <a class="nav-link text-white" href="{{url_for('login')}}">Вход</a>
+                        {% if current_user.is_authenticated %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    {{ current_user.last_name }} {{ current_user.first_name }} {{ current_user.middle_name }}
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Выйти</a></li>
+                                </ul>
+                            </li>
+                        {% else %}
+                            <a class="nav-link text-white" href="{{url_for('login')}}">Вход</a>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
@@ -51,8 +63,7 @@
     </main>
 
 
-    <footer class="footer bg-dark bg-gradient
-    d-flex justify-content-center align-items-center text-white">
+    <footer class="footer bg-dark bg-gradient text-white">
         <span>Кимсанбаев Суннатулло Тохирович, 221-351</span>
     </footer>
 
