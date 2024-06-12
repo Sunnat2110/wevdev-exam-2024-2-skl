@@ -18,3 +18,5 @@ SQLAlchemy==2.0.30
 typing-extensions==4.11.0
 werkzeug==3.0.3
 zipp==3.18.1
+Markdown==3.4.3
+bleach==6.1.0

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 import functools
-from models import User
+from models import User, db
 
 bp_auth = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -22,11 +22,11 @@ def check_rights(action):
 
 def init_login_manager(app):
     login_manager = LoginManager()
-    login_manager.login_view = 'login'
+    login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Для доступа к данной странице необходимо пройти процедуру аутентификации.'
     login_manager.login_message_category = 'warning'
-    login_manager.user_loader(load_user)
     login_manager.init_app(app)
+    login_manager.user_loader(load_user)
 
 def load_user(user_id):
     return User.query.get(user_id)
@@ -38,7 +38,7 @@ def login():
         password = request.form.get('password')
         if login and password:
             user = User.query.filter_by(login=login).first()
-            if user and user.password_hash == password:
+            if user and user.check_password(password):
                 login_user(user)
                 flash('Вы успешно аутентифицированы.', 'success')
                 next = request.args.get('next')

@@ -5,6 +5,9 @@ from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData
+from check_rights import CheckRights
+
+
 
 class Base(DeclarativeBase):
   metadata = MetaData(naming_convention={
@@ -23,10 +26,10 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     login = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role_id = db.Column(db.Integer, nullable=False)
     last_name = db.Column(db.String(50))
     first_name = db.Column(db.String(50))
     middle_name = db.Column(db.String(50))
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id', ondelete='CASCADE'), nullable=False)
 
     def __repr__(self):
         return '<User: %r>' % self.login
@@ -36,6 +39,19 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def is_admin(self):
+        return self.role_id == 1  # Предполагаем, что id роли администратора равен 1
+
+    def is_moder(self):
+        return self.role_id == 2  # Предполагаем, что id роли модератора равен 2
+
+    def can(self, action, record=None):
+        check_user = CheckRights()
+        method = getattr(check_user, action, None)
+        if method:
+            return method()
+        return False
 
 
 class Cover(db.Model):
@@ -63,7 +79,7 @@ class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    publication_year = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
     publisher = db.Column(db.String(255), nullable=False)
     author = db.Column(db.String(255), nullable=False)
     pages = db.Column(db.Integer, nullable=False)
@@ -73,7 +89,7 @@ class Book(db.Model):
         return '<Book {}>'.format(self.title)
     
 class BookGenre(db.Model):
-    __tablename__ = 'book_genre'
+    __tablename__ = 'book_genres'
     book_id = db.Column(db.Integer, db.ForeignKey('books.id'), primary_key=True)
     genre_id = db.Column(db.Integer, db.ForeignKey('genres.id'), primary_key=True)
 
@@ -101,4 +117,13 @@ class Genre(db.Model):
     name = db.Column(db.String(100), unique=True)
 
     def __repr__(self):
-        return '<Genre: %r>' % self.genre_name
+        return '<Genre: %r>' % self.name
+    
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), nullable=False)
+    description = db.Column(db.Text)
+
+    def __repr__(self):
+        return '<User: %r>' % self.name

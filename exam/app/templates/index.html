@@ -59,8 +59,7 @@
         <div class="card mb-4 d-flex flex-row">
           <div class="card-body">
             <div class="row">
-            <div class="col-md-4 book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});">
-            </div>
+              <div class="col-md-4 book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});"></div>
               <div class="col-md-8">
                 <h5 class="card-title"><strong>{{ book.title }}</strong></h5>
                 <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>
@@ -71,11 +70,30 @@
                 <p class="card-text"><strong>Описание:</strong> {{ book.description }}</p>
               </div>
             </div>
+            <div class="row d-flex justify-content-end">
+              <div class="col-md-4 d-flex justify-content-center gap-2">
+                <a class="btn btn-secondary bg-dark bg-gradient" href="{{ url_for('book.show', book_id=book.id) }}">Просмотр</a>
+                {% if current_user.is_authenticated %}
+                  {% if current_user.can('edit') %}
+                    <a class="btn btn-secondary bg-dark bg-gradient" href="{{ url_for('book.edit', book_id=book.id) }}">Редактировать</a>
+                  {% endif %}
+                  {% if current_user.can('delete') %}
+                    <a class="btn btn-secondary bg-dark bg-gradient" href="{{ url_for('book.delete', book_id=book.id) }}">Удалить</a>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
           </div>
         </div>
       </div>
       {% endfor %}
     </div>
+
+    {% if current_user.is_authenticated and current_user.can('add') %}
+    <div class="text-center my-3">
+        <a class="btn btn-lg btn-secondary bg-dark bg-gradient" href="{{ url_for('book.add', book_id=book.id) }}">Добавить книгу</a>
+    </div>
+    {% endif %}
 
     <!-- Пагинация -->
     {{ pagination(total_pages, page) }}
@@ -97,10 +115,9 @@
     background-size: cover;
     background-position: center;
     margin-right: 20px; /* Отступ справа для разделения обложки и информации */
-}
-
-.card-body {
+  }
+  .card-body {
     flex: 1; /* Занимает все доступное пространство внутри .d-flex */
-}
+  }
 </style>
 {% endblock %}

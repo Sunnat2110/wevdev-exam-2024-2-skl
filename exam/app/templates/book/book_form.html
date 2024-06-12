@@ -1,0 +1,53 @@
+{% macro book_form(action, book=None, genres=[], errors=[]) %}
+<form action="{{ action }}" method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        <label for="title">Название</label>
+        <input type="text" name="title" id="title" class="form-control" value="{{ book.title if book else '' }}">
+    </div>
+    <div class="form-group">
+        <label for="author">Автор</label>
+        <input type="text" name="author" id="author" class="form-control" value="{{ book.author if book else '' }}">
+    </div>
+    <div class="form-group">
+        <label for="year">Год</label>
+        <input type="number" name="year" id="year" class="form-control" value="{{ book.year if book else '' }}">
+    </div>
+    <div class="form-group">
+        <label for="publisher">Издатель</label>
+        <input type="text" name="publisher" id="publisher" class="form-control" value="{{ book.publisher if book else '' }}">
+    </div>
+    <div class="form-group">
+        <label for="pages">Страницы</label>
+        <input type="number" name="pages" id="pages" class="form-control" value="{{ book.pages if book else '' }}">
+    </div>
+    <div class="form-group">
+        <label for="description">Описание</label>
+        <textarea name="description" id="description" class="form-control">{{ book.description if book else '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="genres">Жанры</label>
+        <select name="genres" id="genres" class="form-control" multiple>
+            {% for genre in genres %}
+            <option value="{{ genre.id }}" {% if genre.id in (book.genre_ids if book else []) %}selected{% endif %}>{{ genre.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% if not book %}
+    <div class="form-group">
+        <label for="cover">Обложка</label>
+        <input type="file" name="cover" id="cover" class="form-control">
+    </div>
+    {% endif %}
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    {% if errors %}
+    <div class="alert alert-danger mt-3">
+        <ul>
+            {% for error in errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</form>
+{% endmacro %}

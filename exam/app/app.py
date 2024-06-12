@@ -1,11 +1,12 @@
 from flask import Flask, render_template, abort, send_from_directory, flash
 from flask_migrate import Migrate
-from models import Cover, Book, Review, Genre, BookGenre, db
-from auth import bp_auth as auth_bp, init_login_manager
+from models import Cover, Book, Review, Genre, BookGenre, db, Role
+from auth import bp_auth, init_login_manager
+from book import bp_book
 import math
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
-
+from flask_login import current_user
 
 app = Flask(__name__)
 application = app
@@ -17,14 +18,19 @@ migrate = Migrate(app, db)
 
 init_login_manager(app)
 
-
-app.register_blueprint(auth_bp)
+app.register_blueprint(bp_auth)
+app.register_blueprint(bp_book)
 
 @app.errorhandler(SQLAlchemyError)
 def handle_sqlalchemy_error(err):
     error_msg = ('Возникла ошибка при подключении к базе данных. '
                  'Повторите попытку позже.')
     return f'{error_msg} (Подробнее: {err})', 500
+
+def get_user_roles():
+    if current_user.is_authenticated:
+        return [current_user.role_id]
+    return []
 
 @app.route('/')
 @app.route('/page/<int:page>')
@@ -42,7 +48,7 @@ def index(page=1):
             Book.id,
             Book.title,
             Book.description,
-            Book.publication_year.label('year'),
+            Book.year,
             Book.publisher,
             Book.author,
             Book.pages,
@@ -54,10 +60,12 @@ def index(page=1):
         .outerjoin(BookGenre, Book.id == BookGenre.book_id)\
         .outerjoin(Genre, BookGenre.genre_id == Genre.id)\
         .group_by(Book.id)\
-        .order_by(Book.publication_year.desc())\
+        .order_by(Book.year.desc())\
         .limit(PER_PAGE).offset((page - 1) * PER_PAGE).all()
 
-        return render_template('index.html', books=books, page=page, total_pages=total_pages)
+        user_roles = get_user_roles()
+
+        return render_template('index.html', books=books, page=page, total_pages=total_pages, user_roles=user_roles)
     except Exception as e:
         flash('Произошла ошибка при загрузке книг: {}'.format(str(e)), 'danger')
         return render_template('index.html', books=[], page=1, total_pages=1)
@@ -68,6 +76,11 @@ def image(cover_id):
     if cover is None:
         abort(404)
     return send_from_directory(app.config['UPLOAD_FOLDER'], cover.file_name)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
 
 # @app.route('/add_book', methods=['GET', 'POST'])
 # @login_required
@@ -97,5 +110,3 @@ def image(cover_id):
 
 #     return render_template('add_book.html')
 
-if __name__ == '__main__':
-    app.run(debug=True)
