@@ -81,32 +81,3 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
-
-# @app.route('/add_book', methods=['GET', 'POST'])
-# @login_required
-# def add_book():
-#     if request.method == 'POST':
-#         title = request.form['title']
-#         description = request.form['description']
-#         year = request.form['publication_year']
-#         publisher = request.form['publisher']
-#         author = request.form['author']
-#         page_count = request.form['pages']
-#         cover_id = request.form['cover_id']
-
-#         query = """
-#             INSERT INTO books (title, description, publication_year, publisher, author, pages, cover_id)
-#             VALUES (%s, %s, %s, %s, %s, %s, %s)
-#         """
-
-#         try:
-#             with db.connection().cursor() as cursor:
-#                 cursor.execute(query, (title, description, year, publisher, author, page_count, cover_id))
-#                 db.connection().commit()
-#                 flash('Книга успешно добавлена!', 'success')
-#                 return redirect(url_for('index'))
-#         except mysql.connector.errors.DatabaseError:
-#             flash('Произошла ошибка при добавлении книги.', 'danger')
-
-#     return render_template('add_book.html')
-

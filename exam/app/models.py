@@ -41,10 +41,10 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
     
     def is_admin(self):
-        return self.role_id == 1  # Предполагаем, что id роли администратора равен 1
+        return self.role_id == 1
 
     def is_moder(self):
-        return self.role_id == 2  # Предполагаем, что id роли модератора равен 2
+        return self.role_id == 2
 
     def can(self, action, record=None):
         check_user = CheckRights()
