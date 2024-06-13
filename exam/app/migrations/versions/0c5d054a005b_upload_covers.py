@@ -21,40 +21,30 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Create the Flask app context
-        # Bind the session to the engine
         bind = op.get_bind()
         Session = sessionmaker(bind=bind)
         session = Session()
 
-        # Directory containing the images
         upload_folder = UPLOAD_FOLDER
 
-        # Iterate over each file in the directory
         for filename in os.listdir(upload_folder):
             filepath = os.path.join(upload_folder, filename)
             
-            # Skip if not a file
             if not os.path.isfile(filepath):
                 continue
 
-            # Create a FileStorage object from the file
             with open(filepath, 'rb') as file:
-                file_storage = FileStorage(stream=file, filename=filename, content_type='image/jpg')  # Adjust content_type if needed
+                file_storage = FileStorage(stream=file, filename=filename, content_type='image/jpg')
 
-                # Use ImageSaver to save the file and add record to the database
                 saver = ImageSaver(file_storage)
                 saver.save()
 
         session.commit()
 
 def downgrade():
-    # Create the Flask app context
-        # Bind the session to the engine
         bind = op.get_bind()
         Session = sessionmaker(bind=bind)
         session = Session()
 
-        # Clear all records from the covers table
         session.query(Cover).delete()
         session.commit()
