@@ -1,6 +1,5 @@
 {% macro book_form(action, book=None, genres=[], errors=[]) %}
 <form action="{{ action }}" method="post" enctype="multipart/form-data">
-    {{ form.hidden_tag() }}
     <div class="form-group">
         <label for="title">Название</label>
         <input type="text" name="title" id="title" class="form-control" value="{{ book.title if book else '' }}">
@@ -25,7 +24,7 @@
         <label for="description">Описание</label>
         <textarea name="description" id="description" class="form-control">{{ book.description if book else '' }}</textarea>
     </div>
-    <div class="form-group">
+    <div class="form-group mb-2">
         <label for="genres">Жанры</label>
         <select name="genres" id="genres" class="form-control" multiple>
             {% for genre in genres %}

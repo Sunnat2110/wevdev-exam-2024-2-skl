@@ -7,7 +7,7 @@ import markdown
 from models import Book, Genre, BookGenre, Cover, Review, User, db
 from flask_login import login_required, current_user
 from bleach import clean as bleach_clean
-from check_rights import admin_required
+import mimetypes
 
 bp_book = Blueprint('book', __name__, url_prefix='/book')
 
@@ -55,12 +55,13 @@ def show(book_id):
         flash('Произошла ошибка при загрузке данных книги: {}'.format(str(e)), 'danger')
         return render_template('book/show.html', book=None, description_html='', reviews=[], cover_img=None)
 
+
 @bp_book.route('/add_book', methods=['GET', 'POST'])
-@admin_required
 @login_required
 def add():
     if not current_user.can('add'):
-        abort(403)
+        flash('У вас недостаточно прав для доступа к данной странице!', 'danger')
+        return redirect(url_for('index'))
 
     if request.method == 'POST':
         errors = []
@@ -73,24 +74,27 @@ def add():
         genres = request.form.getlist('genres')
         
         cover = request.files['cover']
+        cover_id = None
+
         if cover:
             filename = secure_filename(cover.filename)
-            cover_path = os.path.join(UPLOAD_FOLDER, filename)
-            cover.save(cover_path)
-            with open(cover_path, 'rb') as f:
-                file_hash = hashlib.md5(f.read()).hexdigest()
+            file_data = cover.read()
+            file_hash = hashlib.md5(file_data).hexdigest()
+            mime_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
             
             existing_cover = Cover.query.filter_by(md5_hash=file_hash).first()
             if existing_cover:
                 cover_id = existing_cover.id
             else:
-                new_cover = Cover(file_name=filename, md5_hash=file_hash)
+                new_cover = Cover(file_name=filename, mime_type=mime_type, md5_hash=file_hash)
                 db.session.add(new_cover)
                 db.session.commit()
                 cover_id = new_cover.id
-        else:
-            cover_id = None
 
+                cover_path = os.path.join(UPLOAD_FOLDER, f"{cover_id}_{filename}")
+                with open(cover_path, 'wb') as f:
+                    f.write(file_data)
+        
         try:
             new_book = Book(title=title, author=author, year=year, publisher=publisher, pages=pages, description=description, cover_id=cover_id)
             db.session.add(new_book)
@@ -109,11 +113,13 @@ def add():
             return render_template('book/add_book.html', genres=Genre.query.all(), errors=errors)
     return render_template('book/add_book.html', genres=Genre.query.all(), errors=[])
 
+
 @bp_book.route('/edit/<int:book_id>', methods=['GET', 'POST'])
 @login_required
 def edit(book_id):
     if not current_user.can('edit'):
-        abort(403)
+        flash('У вас недостаточно прав для доступа к данной странице!', 'danger')
+        return redirect(url_for('index'))
 
     book = Book.query.get_or_404(book_id)
 
@@ -126,7 +132,7 @@ def edit(book_id):
         book.pages = request.form['pages']
         book.description = bleach_clean(request.form['description'])
         genres = request.form.getlist('genres')
-        
+
         try:
             db.session.commit()
             BookGenre.query.filter_by(book_id=book.id).delete()
@@ -143,25 +149,72 @@ def edit(book_id):
             return render_template('book/edit.html', book=book, genres=Genre.query.all(), errors=errors)
 
     return render_template('book/edit.html', book=book, genres=Genre.query.all(), errors=[])
+    
+@bp_book.route('/write_review/<int:book_id>', methods=['GET', 'POST'])
+@login_required
+def write_review(book_id):
+    book = Book.query.get_or_404(book_id)
+
+    if request.method == 'POST':
+        rating = request.form['rating']
+        text = bleach_clean(request.form['text'])
+
+        existing_review = Review.query.filter_by(book_id=book_id, user_id=current_user.id).first()
+        if existing_review:
+            flash('Вы уже писали рецензию на эту книгу.', 'danger')
+            return redirect(url_for('book.show', book_id=book_id))
+
+        new_review = Review(rating=rating, text=text, book_id=book_id, user_id=current_user.id)
+        try:
+            db.session.add(new_review)
+            db.session.commit()
+            flash('Рецензия успешно добавлена.', 'success')
+            return redirect(url_for('book.show', book_id=book_id))
+        except Exception as e:
+            db.session.rollback()
+            flash('Произошла ошибка при добавлении рецензии. Попробуйте еще раз.', 'danger')
+            return render_template('book/write_review.html', book=book, errors=[str(e)])
+
+    return render_template('book/write_review.html', book=book, errors=[])
 
 @bp_book.route('/delete/<int:book_id>', methods=['POST'])
-@admin_required
 @login_required
 def delete(book_id):
     if not current_user.can('delete'):
-        abort(403)
+        flash('У вас недостаточно прав для доступа к данной странице!', 'danger')
+        return redirect(url_for('index'))
 
     book = Book.query.get_or_404(book_id)
 
     try:
+        # Удаление связанных жанров
+        BookGenre.query.filter_by(book_id=book.id).delete()
+
+        # Удаление связанных рецензий
+        Review.query.filter_by(book_id=book.id).delete()
+
+        # Удаление обложки
+        if book.cover_id:
+            cover = Cover.query.get(book.cover_id)
+            if cover:
+                # Удаление файла обложки из файловой системы
+                cover_path = os.path.join(UPLOAD_FOLDER, cover.file_name)
+                if os.path.exists(cover_path):
+                    os.remove(cover_path)
+                # Удаление записи обложки из базы данных
+                db.session.delete(cover)
+
+        # Удаление книги
         db.session.delete(book)
         db.session.commit()
+
         flash('Книга успешно удалена', 'success')
         return redirect(url_for('index'))
     except Exception as e:
         db.session.rollback()
-        flash('При удалении книги возникла ошибка', 'danger')
-        return redirect(url_for('book.show', book_id=book_id))
+        flash('При удалении книги возникла ошибка: {}'.format(str(e)), 'danger')
+        return redirect(url_for('index'))
+
 
 
 @bp_book.route('/media/covers/<cover_id>')

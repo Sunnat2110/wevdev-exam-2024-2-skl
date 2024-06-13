@@ -2,6 +2,6 @@
 {% from "book/book_form.html" import book_form %}
 
 {% block content %}
-<h1>Редактировать книгу</h1>
+<h1>Редактирование книги</h1>
 {{ book_form(url_for('book.edit', book_id=book.id), book=book, genres=genres, errors=errors) }}
 {% endblock %}

@@ -11,10 +11,10 @@ def check_rights(action):
         def wrapper(*args, **kwargs):
             user = load_user(kwargs.get('user_id'))
             if current_user.is_anonymous:
-                flash('Авторизуйтесь для просмотра данной страницы!', 'danger')
+                flash('Для выполнения данного действия необходимо пройти процедуру аутентификации!', 'danger')
                 return redirect(url_for('auth.login'))
             if not current_user.can(action):
-                flash('У вас недостаточно прав для доступа к данной странице.', 'danger')
+                flash('У вас недостаточно прав для выполнения данного действия!', 'danger')
                 return redirect(url_for('index'))
             return func(*args, **kwargs)
         return wrapper
@@ -23,7 +23,7 @@ def check_rights(action):
 def init_login_manager(app):
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Для доступа к данной странице необходимо пройти процедуру аутентификации.'
+    login_manager.login_message = 'Для доступа к данной странице необходимо пройти процедуру аутентификации!'
     login_manager.login_message_category = 'warning'
     login_manager.init_app(app)
     login_manager.user_loader(load_user)
