@@ -8,6 +8,7 @@ from models import Book, Genre, BookGenre, Cover, Review, User, db
 from flask_login import login_required, current_user
 from bleach import clean as bleach_clean
 import mimetypes
+from auth import check_rights
 
 bp_book = Blueprint('book', __name__, url_prefix='/book')
 
@@ -58,11 +59,8 @@ def show(book_id):
 
 @bp_book.route('/add_book', methods=['GET', 'POST'])
 @login_required
+@check_rights('add')
 def add():
-    if not current_user.can('add'):
-        flash('У вас недостаточно прав для доступа к данной странице!', 'danger')
-        return redirect(url_for('index'))
-
     if request.method == 'POST':
         errors = []
         title = request.form['title']
@@ -116,11 +114,8 @@ def add():
 
 @bp_book.route('/edit/<int:book_id>', methods=['GET', 'POST'])
 @login_required
+@check_rights('edit')
 def edit(book_id):
-    if not current_user.can('edit'):
-        flash('У вас недостаточно прав для доступа к данной странице!', 'danger')
-        return redirect(url_for('index'))
-
     book = Book.query.get_or_404(book_id)
 
     if request.method == 'POST':
@@ -179,11 +174,8 @@ def write_review(book_id):
 
 @bp_book.route('/delete/<int:book_id>', methods=['POST'])
 @login_required
+@check_rights('delete')
 def delete(book_id):
-    if not current_user.can('delete'):
-        flash('У вас недостаточно прав для доступа к данной странице!', 'danger')
-        return redirect(url_for('index'))
-
     book = Book.query.get_or_404(book_id)
 
     try:

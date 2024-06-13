@@ -83,15 +83,15 @@ class Book(db.Model):
     publisher = db.Column(db.String(255), nullable=False)
     author = db.Column(db.String(255), nullable=False)
     pages = db.Column(db.Integer, nullable=False)
-    cover_id = db.Column(db.Integer, db.ForeignKey('covers.id'), nullable=True)
+    cover_id = db.Column(db.Integer, db.ForeignKey('covers.id', ondelete='CASCADE'), nullable=True)
 
     def __repr__(self):
         return '<Book {}>'.format(self.title)
     
 class BookGenre(db.Model):
     __tablename__ = 'book_genres'
-    book_id = db.Column(db.Integer, db.ForeignKey('books.id'), primary_key=True)
-    genre_id = db.Column(db.Integer, db.ForeignKey('genres.id'), primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), primary_key=True)
+    genre_id = db.Column(db.Integer, db.ForeignKey('genres.id', ondelete='CASCADE'), primary_key=True)
 
     book = db.relationship('Book')
     genre = db.relationship('Genre')
@@ -99,8 +99,8 @@ class BookGenre(db.Model):
 class Review(db.Model):
     __tablename__ = 'reviews'
     id = db.Column(db.Integer, primary_key=True)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.id'))
-    user_id = db.Column(db.Integer) 
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
     rating = db.Column(db.Integer)
     text = db.Column(db.Text)
     created_at = db.Column(db.DateTime)
