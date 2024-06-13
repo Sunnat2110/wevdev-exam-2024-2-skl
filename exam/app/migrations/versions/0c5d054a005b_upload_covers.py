@@ -1,8 +1,8 @@
-"""populate covers table
+"""Upload covers table
 
-Revision ID: <your_revision_id>
-Revises: <previous_revision_id>
-Create Date: <date>
+Revision ID: 0c5d054a005b
+Revises:
+Create Date: 2024-06-11 01:43:17.456734
 
 """
 from alembic import op
