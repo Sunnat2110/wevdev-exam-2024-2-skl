@@ -27,3 +27,33 @@ main {
 	text-align: center;
 	border-top: 1px solid #e7e7e7;
 }
+
+.about-image {
+    background-image: url("{{ url_for('static', filename='images/bg-image.jpg') }}");
+    height: 400px;
+    background-size: cover;
+    background-position: center;
+    padding: 20px;
+    color: white;
+    text-shadow: 1px 1px 2px black;
+  }
+
+  .book-cover {
+    width: 300px;
+    height: 500px;
+    background-size: cover;
+    background-position: center;
+    margin-right: 20px;
+  }
+
+  .popular-book-cover {
+    width: 300px;
+    height: 500px;
+    background-size: cover;
+    background-position: center;
+    margin: auto;
+  }
+
+  .card-body {
+    flex: 1;
+  }

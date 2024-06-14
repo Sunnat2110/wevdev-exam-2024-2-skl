@@ -1,8 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, Blueprint, abort, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
-from sqlalchemy import and_
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_, null
 import os
 import hashlib
 import markdown
@@ -12,7 +11,7 @@ from bleach import clean as bleach_clean
 import mimetypes
 from auth import check_rights
 import csv
-from io import BytesIO
+from io import BytesIO, StringIO
 
 bp_book = Blueprint('book', __name__, url_prefix='/book')
 
@@ -204,6 +203,9 @@ def delete(book_id):
         # Удаление связанных рецензий
         Review.query.filter_by(book_id=book.id).delete()
 
+        # Удаление связанных посещений
+        Visit.query.filter_by(book_id=book.id).delete()
+
         # Удаление обложки
         if book.cover_id:
             cover = Cover.query.get(book.cover_id)
@@ -225,32 +227,67 @@ def delete(book_id):
         db.session.rollback()
         flash('При удалении книги возникла ошибка: {}'.format(str(e)), 'danger')
         return redirect(url_for('index'))
+
     
+
 @bp_book.route('/admin/stats')
 @login_required
 @check_rights('visit')
 def admin_stats():
+    return redirect(url_for('book.user_actions'))
+
+
+@bp_book.route('/admin/user_actions')
+@login_required
+@check_rights('visit')
+def user_actions():
+    PER_PAGE = 10
+    page = request.args.get('page', 1, type=int)
+
+    user_actions_query = db.session.query(
+        Visit.id,
+        Visit.visit_time,
+        db.case(
+            (User.id.is_(None), 'Неаутентифицированный пользователь'),
+            else_=db.func.concat(User.first_name, ' ', User.last_name, ' ', User.middle_name)
+        ).label('full_name'),
+        Book.title
+    ).join(Book, Visit.book_id == Book.id)\
+    .outerjoin(User, Visit.user_id == User.id)\
+    .order_by(Visit.visit_time.desc())
+
+    user_actions = user_actions_query.paginate(page=page, per_page=PER_PAGE, error_out=False)
+
+    start = (page - 1) * PER_PAGE
+
+    return render_template('admin/user_actions.html', 
+                           user_actions=user_actions.items, 
+                           pages=user_actions.pages,
+                           current_page=page,
+                           start=start,
+                           enumerate=enumerate)
+
+
+from datetime import datetime
+
+@bp_book.route('/admin/book_stats')
+@login_required
+@check_rights('visit')
+def book_stats():
     PER_PAGE = 10
     page = request.args.get('page', 1, type=int)
     date_from = request.args.get('date_from')
     date_to = request.args.get('date_to')
 
-    user_actions_query = db.session.query(
-        Visit.id,
-        Visit.visit_time,
-        User.login,
-        Book.title
-    ).join(User, Visit.user_id == User.id, isouter=True)\
-    .join(Book, Visit.book_id == Book.id)\
-    .order_by(Visit.visit_time.desc())
+    try:
+        if date_from:
+            date_from = datetime.strptime(date_from, '%Y-%m-%d')
+        if date_to:
+            date_to = datetime.strptime(date_to, '%Y-%m-%d')
+    except ValueError:
+        date_from = None
+        date_to = None
 
-    if date_from:
-        user_actions_query = user_actions_query.filter(Visit.visit_time >= date_from)
-    if date_to:
-        user_actions_query = user_actions_query.filter(Visit.visit_time <= date_to)
-
-    user_actions = user_actions_query.paginate(page=page, per_page=PER_PAGE, error_out=False)
-    
     book_stats_query = db.session.query(
         Book.id,
         Book.title,
@@ -259,6 +296,7 @@ def admin_stats():
     .group_by(Book.id)\
     .order_by(func.count(Visit.id).desc())
 
+    # Применение фильтров по датам
     if date_from:
         book_stats_query = book_stats_query.filter(Visit.visit_time >= date_from)
     if date_to:
@@ -266,11 +304,18 @@ def admin_stats():
 
     book_stats = book_stats_query.paginate(page=page, per_page=PER_PAGE, error_out=False)
 
-    return render_template('admin/stats.html', 
-                           user_actions=user_actions.items, 
+    start = (page - 1) * PER_PAGE
+
+    return render_template('admin/book_stats.html', 
                            book_stats=book_stats.items, 
-                           pages=user_actions.pages,
-                           current_page=page)
+                           pages=book_stats.pages,
+                           current_page=page,
+                           start=start,
+                           date_from=request.args.get('date_from', ''),
+                           date_to=request.args.get('date_to', ''),
+                           enumerate=enumerate)
+
+
 
 @bp_book.route('/export_user_action_csv')
 @check_rights('visit')
@@ -279,17 +324,21 @@ def export_user_action_csv():
         user_activities = db.session.query(Visit).all()
         
         date_str = datetime.now().strftime("%Y-%m-%d")
-        filename = f"user_activity_{date_str}.csv"
+        filename = f"user_actions_{date_str}.csv"
         
-        si = BytesIO()
+        si = StringIO()
+        writer = csv.writer(si)
         
-        si.write("ID,User ID,Book ID,Visit Time\n".encode('utf-8'))
+        writer.writerow(["Visit ID", "User", "Book ID", "Visit Time"])
         
         for activity in user_activities:
-            si.write(f"{activity.id},{activity.user_id},{activity.book_id},{activity.visit_time}\n".encode('utf-8'))
+            user_display = f"{activity.user.id}" if activity.user else "Unauthorized user"
+            writer.writerow([activity.id, user_display, activity.book_id, activity.visit_time])
+        
+        response_data = BytesIO(si.getvalue().encode('utf-8'))
         
         response = send_file(
-            BytesIO(si.getvalue()),
+            response_data,
             mimetype="text/csv",
             as_attachment=True,
             download_name=filename
@@ -314,15 +363,20 @@ def export_book_stats_csv():
         date_str = datetime.now().strftime("%Y-%m-%d")
         filename = f"book_stats_{date_str}.csv"
         
-        si = BytesIO()
+
+        si = StringIO()
+        writer = csv.writer(si)
+
         
-        si.write("Book ID,Title,View Count\n".encode('utf-8'))
+        writer.writerow(["Book ID", "Title", "View Count"])
         
         for stat in book_stats:
-            si.write(f"{stat.id},{stat.title},{stat.view_count}\n".encode('utf-8'))
-        
+           writer.writerow([stat.id, stat.title, stat.view_count])
+
+        response_data = BytesIO(si.getvalue().encode('utf-8'))
+
         response = send_file(
-            BytesIO(si.getvalue()),
+            response_data,
             mimetype="text/csv",
             as_attachment=True,
             download_name=filename

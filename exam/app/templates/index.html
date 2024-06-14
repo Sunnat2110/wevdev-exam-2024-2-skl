@@ -8,7 +8,7 @@
     <p>Мы рады приветствовать вас в нашей электронной библиотеке, где вы найдете богатую коллекцию книг на любой
       вкус. Наша библиотека создана для того, чтобы сделать чтение доступным, удобным и увлекательным.</p>
   </div>
-  <div class="container about-image"></div>
+  <div class="container about-image" style="background-image: url({{ url_for('static', filename='images/bg-image.jpg') }});"></div>
   <hr class="heading-line mx-auto">
   <div class="adventages">
     <section>
@@ -52,14 +52,14 @@
   </div>
 
 <hr class="heading-line mx-auto">
-  <div class="container mt-5">
+  <div class="container mt-3">
     <h2 class="text-center">Популярные книги</h2>
     <div class="row">
       {% for book in popular_books %}
         <div class="col-md-4">
           <div class="card mb-4">
-            <img class="card-img-top book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги">
-            <div class="card-body">
+            <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги"></div>
+            <div class="card-body text-center">
               <h5 class="card-title">{{ book.title }}</h5>
               <p class="card-text">{{ book.genres }}</p>
               <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
@@ -68,15 +68,15 @@
         </div>
       {% endfor %}
     </div>
-    {% if current_user.is_authenticated and recent_books %}
+    {% if recent_books %}
       <hr class="heading-line mx-auto">
       <h2 class="text-center">Недавно просмотренные книги</h2>
       <div class="row">
         {% for book in recent_books %}
           <div class="col-md-4">
             <div class="card mb-4">
-              <img class="card-img-top book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги">
-              <div class="card-body">
+              <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги"></div>
+              <div class="card-body text-center ">
                 <h5 class="card-title">{{ book.title }}</h5>
                 <p class="card-text">{{ book.genres }}</p>
                 <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
@@ -160,35 +160,8 @@
       <a class="btn btn-lg btn-secondary bg-dark bg-gradient" href="{{ url_for('book.add') }}">Добавить книгу</a>
     </div>
     {% endif %}
-
     <!-- Пагинация -->
     {{ pagination(total_pages, page) }}
   </div>
 </main>
-<style>
-  .about-image {
-    background-image: url("{{ url_for('static', filename='images/bg-image.jpg') }}");
-    height: 400px;
-    background-size: cover;
-    background-position: center;
-    padding: 20px;
-    color: white;
-    text-shadow: 1px 1px 2px black;
-  }
-
-  .book-cover {
-    width: 300px;
-    height: 500px;
-    background-size: cover;
-    background-position: center;
-    margin-right: 20px;
-  }
-
-  .card-body {
-    flex: 1;
-  }
-</style>
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 {% endblock %}

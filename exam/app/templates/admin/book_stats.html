@@ -1,0 +1,42 @@
+{% extends "admin/stats_base.html" %}
+{% from '/pagination.html' import pagination %}
+
+{% block stats_content %}
+<div class="col-md-12">
+    <h3>Статистика просмотра книг</h3>
+    <form method="get" action="{{ url_for('book.book_stats') }}" class="mb-4">
+        <div class="form-row">
+            <div class="col">
+                <input type="date" name="date_from" class="form-control" placeholder="Дата от" value="{{ date_from }}">
+            </div>
+            <div class="col">
+                <input type="date" name="date_to" class="form-control" placeholder="Дата до" value="{{ date_to }}">
+            </div>
+            <div class="col mt-2">
+                <button type="submit" class="btn btn-secondary bg-dark bg-gradient">Применить</button>
+            </div>
+        </div>
+    </form>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Книга</th>
+                <th>Количество посещений</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for index, stats in enumerate(book_stats, start=start) %}
+            <tr>
+                <td>{{ index + 1 }}</td>
+                <td>{{ stats.title }}</td>
+                <td>{{ stats.visit_count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {{ pagination(pages, current_page) }}
+</div>
+<div class="d-flex justify-content-center">
+    <a href="{{ url_for('book.export_book_stats_csv') }}" class="btn btn-secondary bg-dark bg-gradient">Экспорт в CSV</a>
+</div>
+{% endblock %}

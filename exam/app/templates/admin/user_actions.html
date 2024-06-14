@@ -1,0 +1,36 @@
+{% extends "admin/stats_base.html" %}
+{% from '/pagination.html' import pagination %}
+
+{% block stats_content %}
+<div class="row d-flex justify-content-center">
+    <div class="col-md-6">
+        <h3 class="text-center my-2">Журнал действий пользователей</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>ФИО пользователя</th>
+                    <th>Книга</th>
+                    <th>Время посещения</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for index, action in enumerate(user_actions, start=start) %}
+                <tr>
+                    <td>{{ index + 1 }}</td>
+                    <td>{{ action.full_name }}</td>
+                    <td>{{ action.title }}</td>
+                    <td>{{ action.visit_time }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {{ pagination(pages, current_page) }}
+    </div>
+</div>
+
+<div class="d-flex justify-content-center">
+    <a href="{{ url_for('book.export_user_action_csv') }}" class="btn btn-secondary bg-dark bg-gradient">Экспорт в
+        CSV</a>
+</div>
+{% endblock %}

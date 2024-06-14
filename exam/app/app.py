@@ -65,21 +65,29 @@ def index(page=1):
         .limit(PER_PAGE).offset((page - 1) * PER_PAGE).all()
 
         popular_books = db.session.query(
-        Book.id,
-        Book.title,
-        func.count(Visit.id).label('visit_count')
-    ).join(Visit).filter(
-        Visit.visit_time >= datetime.utcnow() - timedelta(days=90)
-    ).group_by(Book.id).order_by(func.count(Visit.id).desc()).limit(5).all()
+            Book.id,
+            Book.title,
+            Book.cover_id,
+            func.count(Visit.id).label('visit_count')
+        ).join(Visit).filter(
+            Visit.visit_time >= datetime.utcnow() - timedelta(days=90)
+        ).group_by(Book.id).order_by(func.count(Visit.id).desc()).limit(5).all()
 
-        recent_books = []
+        # Проверяем, аутентифицирован ли пользователь
         if current_user.is_authenticated:
             recent_books = db.session.query(
                 Book.id,
-                Book.title
+                Book.title,
+                Book.cover_id
             ).join(Visit).filter(
                 Visit.user_id == current_user.id
             ).order_by(Visit.visit_time.desc()).limit(5).all()
+        else:
+            recent_books = db.session.query(
+                Book.id,
+                Book.title,
+                Book.cover_id
+            ).join(Visit).order_by(Visit.visit_time.desc()).limit(5).all()
 
         user_roles = get_user_roles()
 
@@ -87,6 +95,7 @@ def index(page=1):
     except Exception as e:
         flash('Произошла ошибка при загрузке книг: {}'.format(str(e)), 'danger')
         return render_template('index.html', books=[], page=1, total_pages=1)
+
 
 @app.route('/media/covers/<cover_id>')
 def image(cover_id):
