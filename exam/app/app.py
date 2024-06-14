@@ -36,7 +36,7 @@ def get_user_roles():
 @app.route('/')
 @app.route('/page/<int:page>')
 def index(page=1):
-    PER_PAGE = 10  # Количество книг на одной странице
+    PER_PAGE = 10
     try:
         # Запрос для получения общего количества книг
         total_books = db.session.query(func.count(Book.id)).scalar()
@@ -73,7 +73,6 @@ def index(page=1):
             Visit.visit_time >= datetime.utcnow() - timedelta(days=90)
         ).group_by(Book.id).order_by(func.count(Visit.id).desc()).limit(5).all()
 
-        # Проверяем, аутентифицирован ли пользователь
         if current_user.is_authenticated:
             recent_books = db.session.query(
                 Book.id,

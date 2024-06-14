@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, Blueprint, abort, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
-from sqlalchemy import and_, func, or_, null
+from sqlalchemy import and_, func
 import os
 import hashlib
 import markdown
@@ -296,7 +296,6 @@ def book_stats():
     .group_by(Book.id)\
     .order_by(func.count(Visit.id).desc())
 
-    # Применение фильтров по датам
     if date_from:
         book_stats_query = book_stats_query.filter(Visit.visit_time >= date_from)
     if date_to:
