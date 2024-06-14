@@ -1,23 +1,27 @@
-from flask import render_template, redirect, url_for, flash, request, Blueprint, abort, send_from_directory
+from flask import render_template, redirect, url_for, flash, request, Blueprint, abort, send_from_directory, send_file
 from werkzeug.utils import secure_filename
+from datetime import datetime
+from sqlalchemy import and_
 from sqlalchemy import func
 import os
 import hashlib
 import markdown
-from models import Book, Genre, BookGenre, Cover, Review, User, db
+from models import Book, Genre, BookGenre, Cover, Review, User, Visit, db
 from flask_login import login_required, current_user
 from bleach import clean as bleach_clean
 import mimetypes
 from auth import check_rights
+import csv
+from io import BytesIO
 
 bp_book = Blueprint('book', __name__, url_prefix='/book')
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media', 'covers')
 
+
 @bp_book.route('/show/<int:book_id>')
 def show(book_id):
     try:
-        # Получаем книгу по ID
         book = db.session.query(
             Book.id,
             Book.title,
@@ -39,7 +43,6 @@ def show(book_id):
         cover_img = Cover.query.filter_by(id=cover_id).first()
         cover_img = cover_img.file_name if cover_img else None
 
-        # Получаем рецензии для книги
         reviews = db.session.query(
             Review.rating,
             Review.text,
@@ -48,13 +51,29 @@ def show(book_id):
         ).join(User, Review.user_id == User.id)\
         .filter(Review.book_id == book_id).all()
 
-        # Конвертируем описание книги из Markdown в HTML
         description_html = markdown.markdown(book.description)
+
+        user_id = current_user.id if current_user.is_authenticated else None
+        now = datetime.utcnow()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        visit_count = db.session.query(func.count(Visit.id)).filter(
+            and_(
+                Visit.user_id == user_id,
+                Visit.book_id == book_id,
+                Visit.visit_time >= start_of_day
+            )
+        ).scalar()
+        
+        if visit_count < 10:
+            visit = Visit(user_id=user_id, book_id=book_id, visit_time=now)
+            db.session.add(visit)
+            db.session.commit()
 
         return render_template('book/show.html', book=book, description_html=description_html, reviews=reviews, cover_img=cover_img)
     except Exception as e:
         flash('Произошла ошибка при загрузке данных книги: {}'.format(str(e)), 'danger')
         return render_template('book/show.html', book=None, description_html='', reviews=[], cover_img=None)
+
 
 
 @bp_book.route('/add_book', methods=['GET', 'POST'])
@@ -206,7 +225,112 @@ def delete(book_id):
         db.session.rollback()
         flash('При удалении книги возникла ошибка: {}'.format(str(e)), 'danger')
         return redirect(url_for('index'))
+    
+@bp_book.route('/admin/stats')
+@login_required
+@check_rights('visit')
+def admin_stats():
+    PER_PAGE = 10
+    page = request.args.get('page', 1, type=int)
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
 
+    user_actions_query = db.session.query(
+        Visit.id,
+        Visit.visit_time,
+        User.login,
+        Book.title
+    ).join(User, Visit.user_id == User.id, isouter=True)\
+    .join(Book, Visit.book_id == Book.id)\
+    .order_by(Visit.visit_time.desc())
+
+    if date_from:
+        user_actions_query = user_actions_query.filter(Visit.visit_time >= date_from)
+    if date_to:
+        user_actions_query = user_actions_query.filter(Visit.visit_time <= date_to)
+
+    user_actions = user_actions_query.paginate(page=page, per_page=PER_PAGE, error_out=False)
+    
+    book_stats_query = db.session.query(
+        Book.id,
+        Book.title,
+        func.count(Visit.id).label('visit_count')
+    ).join(Visit)\
+    .group_by(Book.id)\
+    .order_by(func.count(Visit.id).desc())
+
+    if date_from:
+        book_stats_query = book_stats_query.filter(Visit.visit_time >= date_from)
+    if date_to:
+        book_stats_query = book_stats_query.filter(Visit.visit_time <= date_to)
+
+    book_stats = book_stats_query.paginate(page=page, per_page=PER_PAGE, error_out=False)
+
+    return render_template('admin/stats.html', 
+                           user_actions=user_actions.items, 
+                           book_stats=book_stats.items, 
+                           pages=user_actions.pages,
+                           current_page=page)
+
+@bp_book.route('/export_user_action_csv')
+@check_rights('visit')
+def export_user_action_csv():
+    try:
+        user_activities = db.session.query(Visit).all()
+        
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"user_activity_{date_str}.csv"
+        
+        si = BytesIO()
+        
+        si.write("ID,User ID,Book ID,Visit Time\n".encode('utf-8'))
+        
+        for activity in user_activities:
+            si.write(f"{activity.id},{activity.user_id},{activity.book_id},{activity.visit_time}\n".encode('utf-8'))
+        
+        response = send_file(
+            BytesIO(si.getvalue()),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=filename
+        )
+        return response
+    except Exception as e:
+        flash(f'Ошибка при экспорте данных: {str(e)}', 'danger')
+        return redirect(url_for('book.admin_stats'))
+
+
+@bp_book.route('/export_book_stats_csv')
+@check_rights('visit')
+def export_book_stats_csv():
+    try:
+        book_stats = db.session.query(
+            Book.id, 
+            Book.title, 
+            func.count(Visit.id).label('view_count')
+        ).outerjoin(Visit, Visit.book_id == Book.id)\
+         .group_by(Book.id).all()
+        
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"book_stats_{date_str}.csv"
+        
+        si = BytesIO()
+        
+        si.write("Book ID,Title,View Count\n".encode('utf-8'))
+        
+        for stat in book_stats:
+            si.write(f"{stat.id},{stat.title},{stat.view_count}\n".encode('utf-8'))
+        
+        response = send_file(
+            BytesIO(si.getvalue()),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=filename
+        )
+        return response
+    except Exception as e:
+        flash(f'Ошибка при экспорте данных: {str(e)}', 'danger')
+        return redirect(url_for('book.admin_stats'))
 
 
 @bp_book.route('/media/covers/<cover_id>')

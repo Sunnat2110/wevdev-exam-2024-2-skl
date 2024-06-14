@@ -12,3 +12,6 @@ class CheckRights:
 
     def show(self):
         return current_user.is_authenticated
+    
+    def visit(self):
+        return current_user.is_admin()

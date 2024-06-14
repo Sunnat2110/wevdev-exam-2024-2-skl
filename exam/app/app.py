@@ -1,8 +1,9 @@
 from flask import Flask, render_template, abort, send_from_directory, flash
 from flask_migrate import Migrate
-from models import Cover, Book, Review, Genre, BookGenre, db, Role
+from models import Cover, Book, Review, Genre, BookGenre, db, Role, Visit
 from auth import bp_auth, init_login_manager
 from book import bp_book
+from datetime import datetime, timedelta
 import math
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -63,9 +64,26 @@ def index(page=1):
         .order_by(Book.year.desc())\
         .limit(PER_PAGE).offset((page - 1) * PER_PAGE).all()
 
+        popular_books = db.session.query(
+        Book.id,
+        Book.title,
+        func.count(Visit.id).label('visit_count')
+    ).join(Visit).filter(
+        Visit.visit_time >= datetime.utcnow() - timedelta(days=90)
+    ).group_by(Book.id).order_by(func.count(Visit.id).desc()).limit(5).all()
+
+        recent_books = []
+        if current_user.is_authenticated:
+            recent_books = db.session.query(
+                Book.id,
+                Book.title
+            ).join(Visit).filter(
+                Visit.user_id == current_user.id
+            ).order_by(Visit.visit_time.desc()).limit(5).all()
+
         user_roles = get_user_roles()
 
-        return render_template('index.html', books=books, page=page, total_pages=total_pages, user_roles=user_roles)
+        return render_template('index.html', books=books, page=page, total_pages=total_pages, user_roles=user_roles, popular_books=popular_books, recent_books=recent_books)
     except Exception as e:
         flash('Произошла ошибка при загрузке книг: {}'.format(str(e)), 'danger')
         return render_template('index.html', books=[], page=1, total_pages=1)

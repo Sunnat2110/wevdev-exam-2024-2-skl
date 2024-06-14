@@ -50,6 +50,44 @@
       </div>
     </section>
   </div>
+
+<hr class="heading-line mx-auto">
+  <div class="container mt-5">
+    <h2 class="text-center">Популярные книги</h2>
+    <div class="row">
+      {% for book in popular_books %}
+        <div class="col-md-4">
+          <div class="card mb-4">
+            <img class="card-img-top book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги">
+            <div class="card-body">
+              <h5 class="card-title">{{ book.title }}</h5>
+              <p class="card-text">{{ book.genres }}</p>
+              <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% if current_user.is_authenticated and recent_books %}
+      <hr class="heading-line mx-auto">
+      <h2 class="text-center">Недавно просмотренные книги</h2>
+      <div class="row">
+        {% for book in recent_books %}
+          <div class="col-md-4">
+            <div class="card mb-4">
+              <img class="card-img-top book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги">
+              <div class="card-body">
+                <h5 class="card-title">{{ book.title }}</h5>
+                <p class="card-text">{{ book.genres }}</p>
+                <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
   <hr class="heading-line mx-auto">
   <div class="container mt-5">
     <h2 class="text-center">Список книг</h2>

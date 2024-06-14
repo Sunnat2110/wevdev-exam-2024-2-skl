@@ -3,11 +3,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy import MetaData
 from check_rights import CheckRights
-
-
+from datetime import datetime
 
 class Base(DeclarativeBase):
   metadata = MetaData(naming_convention={
@@ -30,6 +29,7 @@ class User(db.Model, UserMixin):
     first_name = db.Column(db.String(50))
     middle_name = db.Column(db.String(50))
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id', ondelete='CASCADE'), nullable=False)
+    visits = db.relationship('Visit', back_populates='user')
 
     def __repr__(self):
         return '<User: %r>' % self.login
@@ -84,6 +84,8 @@ class Book(db.Model):
     author = db.Column(db.String(255), nullable=False)
     pages = db.Column(db.Integer, nullable=False)
     cover_id = db.Column(db.Integer, db.ForeignKey('covers.id', ondelete='CASCADE'), nullable=True)
+    visits = relationship('Visit', back_populates='book')
+
 
     def __repr__(self):
         return '<Book {}>'.format(self.title)
@@ -127,3 +129,13 @@ class Role(db.Model):
 
     def __repr__(self):
         return '<User: %r>' % self.name
+    
+class Visit(db.Model):
+    __tablename__ = 'visits'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)
+    visit_time = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('visit_logs', lazy=True))
+    book = db.relationship('Book', backref=db.backref('visit_logs', lazy=True))
