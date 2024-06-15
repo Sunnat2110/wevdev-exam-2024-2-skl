@@ -18,7 +18,7 @@
                         <p class="card-text"><strong>Год:</strong> {{ book.year }}</p>
                         <p class="card-text"><strong>Жанр:</strong> {{ book.genres }}</p>
                         <p class="card-text"><strong>Издательство:</strong> {{ book.publisher }}</p>
-                        <p class="card-text"><strong>Средняя оценка:</strong> {{ book.avg_rating | default('Нет оценок') }}</p>
+                        <p class="card-text"><strong>Средняя оценка:</strong> {{ "%.2f"|format(book.avg_rating) if book.avg_rating else "Нет оценок" }}</p>
                         <p class="card-text"><strong>Количество рецензий:</strong> {{ book.review_count }}</p>
                         <p class="card-text"><strong>Описание:</strong> {{ book.description }}</p>
                     </div>
@@ -28,36 +28,25 @@
     </div>  
 
     <h2>Рецензии</h2>
-<ul>
-    {% for review in reviews %}
-    <li>
-        <p><strong>{{ review.login }}</strong> ({{ review.rating }}): {{ review.text|safe }}</p>
-    </li>
-    {% endfor %}
-</ul>
+    <ul>
+        {% for review in reviews %}
+        <li>
+            <p><strong>{{ current_user.last_name }} {{ current_user.first_name }} {{ current_user.middle_name }}</strong> ({{ review.rating }}): {{ review.text|safe }}</p>
+        </li>
+        {% endfor %}
+    </ul>
 
-{% if current_user.is_authenticated %}
-    {% set user_review = reviews | selectattr("user_id", "equalto", current_user.id) | list %}
-    {% if user_review|length == 0 %}
-    <div class="text-center my-3">
-        <a class="btn btn-secondary btn-lg bg-dark bg-gradient" href="{{ url_for('book.write_review', book_id=book.id) }}">Написать рецензию</a>
-    </div>
-    {% else %}
-    <h3>Ваша рецензия</h3>
-    <p><strong>{{ current_user.login }}</strong> ({{ user_review[0].rating }}): {{ user_review[0].text|safe }}</p>
+    {% if current_user.is_authenticated %}
+        {% set user_review = reviews | selectattr("user_id", "equalto", current_user.id) | list %}
+        {% if user_review|length == 0 %}
+        <div class="text-center my-3">
+            <a class="btn btn-secondary btn-lg bg-dark bg-gradient" href="{{ url_for('book.write_review', book_id=book.id) }}">Написать рецензию</a>
+        </div>
+        {% else %}
+        <h3>Ваша рецензия</h3>
+        <p><strong>{{ current_user.last_name }} {{ current_user.first_name }} {{ current_user.middle_name }}</strong> ({{ user_review[0].rating }}): {{ user_review[0].text|safe }}</p>
+        {% endif %}
     {% endif %}
-{% endif %}
-
-    
 </div>
-
-<style>
-    .book-cover {
-        width: 95%;
-        height: 95%;
-        background-size: cover;
-        background-position: center;
-    }
-</style>
 
 {% endblock %}

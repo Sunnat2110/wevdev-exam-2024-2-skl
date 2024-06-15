@@ -105,7 +105,7 @@ class Review(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
     rating = db.Column(db.Integer)
     text = db.Column(db.Text)
-    created_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def __repr__(self):
         return f'<Reviews: {self.user_id} {self.created_at}>'

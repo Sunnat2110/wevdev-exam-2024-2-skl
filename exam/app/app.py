@@ -1,6 +1,6 @@
 from flask import Flask, render_template, abort, send_from_directory, flash
 from flask_migrate import Migrate
-from models import Cover, Book, Review, Genre, BookGenre, db, Role, Visit
+from models import Cover, Book, Review, Genre, BookGenre, db, Visit
 from auth import bp_auth, init_login_manager
 from book import bp_book
 from datetime import datetime, timedelta
@@ -54,7 +54,7 @@ def index(page=1):
             Book.author,
             Book.pages,
             Book.cover_id,
-            func.avg(Review.rating).label('avg_rating'),
+            func.round(func.avg(Review.rating), 2).label('avg_rating'),
             func.count(Review.id).label('review_count'),
             func.group_concat(Genre.name).label('genres')
         ).outerjoin(Review, Book.id == Review.book_id)\

@@ -18,10 +18,12 @@ bp_book = Blueprint('book', __name__, url_prefix='/book')
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media', 'covers')
 
 
+from sqlalchemy import func
+
 @bp_book.route('/show/<int:book_id>')
 def show(book_id):
     try:
-        book = db.session.query(
+        book_query = db.session.query(
             Book.id,
             Book.title,
             Book.description,
@@ -30,15 +32,18 @@ def show(book_id):
             Book.author,
             Book.pages,
             Book.cover_id,
-            func.group_concat(Genre.name).label('genres')
+            func.group_concat(Genre.name).label('genres'),
+            func.coalesce(func.avg(Review.rating), 0).label('avg_rating'),
+            func.count(Review.id).label('review_count')
         ).outerjoin(BookGenre, Book.id == BookGenre.book_id)\
         .outerjoin(Genre, BookGenre.genre_id == Genre.id)\
+        .outerjoin(Review, Review.book_id == Book.id)\
         .filter(Book.id == book_id).group_by(Book.id).first()
 
-        if book is None:
+        if book_query is None:
             abort(404)
 
-        cover_id = book.cover_id
+        cover_id = book_query.cover_id
         cover_img = Cover.query.filter_by(id=cover_id).first()
         cover_img = cover_img.file_name if cover_img else None
 
@@ -50,7 +55,7 @@ def show(book_id):
         ).join(User, Review.user_id == User.id)\
         .filter(Review.book_id == book_id).all()
 
-        description_html = markdown.markdown(book.description)
+        description_html = markdown.markdown(book_query.description)
 
         user_id = current_user.id if current_user.is_authenticated else None
         now = datetime.utcnow()
@@ -68,10 +73,11 @@ def show(book_id):
             db.session.add(visit)
             db.session.commit()
 
-        return render_template('book/show.html', book=book, description_html=description_html, reviews=reviews, cover_img=cover_img)
+        return render_template('book/show.html', book=book_query, description_html=description_html, reviews=reviews, cover_img=cover_img)
     except Exception as e:
         flash('Произошла ошибка при загрузке данных книги: {}'.format(str(e)), 'danger')
         return render_template('book/show.html', book=None, description_html='', reviews=[], cover_img=None)
+
 
 
 
@@ -190,6 +196,7 @@ def write_review(book_id):
 
     return render_template('book/write_review.html', book=book, errors=[])
 
+
 @bp_book.route('/delete/<int:book_id>', methods=['POST'])
 @login_required
 @check_rights('delete')
@@ -208,14 +215,16 @@ def delete(book_id):
 
         # Удаление обложки
         if book.cover_id:
-            cover = Cover.query.get(book.cover_id)
-            if cover:
-                # Удаление файла обложки из файловой системы
-                cover_path = os.path.join(UPLOAD_FOLDER, cover.file_name)
-                if os.path.exists(cover_path):
-                    os.remove(cover_path)
-                # Удаление записи обложки из базы данных
-                db.session.delete(cover)
+            other_books_with_same_cover = Book.query.filter(Book.cover_id == book.cover_id, Book.id != book.id).count()
+            if other_books_with_same_cover == 0:
+                cover = Cover.query.get(book.cover_id)
+                if cover:
+                    # Удаление файла обложки из файловой системы
+                    cover_path = os.path.join(UPLOAD_FOLDER, cover.file_name)
+                    if os.path.exists(cover_path):
+                        os.remove(cover_path)
+                    # Удаление записи обложки из базы данных
+                    db.session.delete(cover)
 
         # Удаление книги
         db.session.delete(book)
@@ -267,8 +276,6 @@ def user_actions():
                            start=start,
                            enumerate=enumerate)
 
-
-from datetime import datetime
 
 @bp_book.route('/admin/book_stats')
 @login_required
