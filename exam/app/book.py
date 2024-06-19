@@ -322,7 +322,6 @@ def book_stats():
                            enumerate=enumerate)
 
 
-
 @bp_book.route('/export_user_action_csv')
 @check_rights('visit')
 def export_user_action_csv():
@@ -333,16 +332,18 @@ def export_user_action_csv():
         filename = f"user_actions_{date_str}.csv"
         
         si = StringIO()
-        writer = csv.writer(si)
-        
+        writer = csv.writer(si, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
         writer.writerow(["Visit ID", "User", "Book ID", "Visit Time"])
-        
+
         for activity in user_activities:
-            user_display = f"{activity.user.id}" if activity.user else "Unauthorized user"
+            user_display = f"{activity.user.id}" if activity.user else "Неаутентифицированный пользователь"
             writer.writerow([activity.id, user_display, activity.book_id, activity.visit_time])
-        
-        response_data = BytesIO(si.getvalue().encode('utf-8'))
-        
+
+        response_data = BytesIO()
+        response_data.write(si.getvalue().encode('utf-8-sig'))
+        response_data.seek(0)
+
         response = send_file(
             response_data,
             mimetype="text/csv",
@@ -353,6 +354,7 @@ def export_user_action_csv():
     except Exception as e:
         flash(f'Ошибка при экспорте данных: {str(e)}', 'danger')
         return redirect(url_for('book.admin_stats'))
+
 
 
 @bp_book.route('/export_book_stats_csv')
@@ -368,18 +370,18 @@ def export_book_stats_csv():
         
         date_str = datetime.now().strftime("%Y-%m-%d")
         filename = f"book_stats_{date_str}.csv"
-        
 
         si = StringIO()
-        writer = csv.writer(si)
+        writer = csv.writer(si, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
-        
         writer.writerow(["Book ID", "Title", "View Count"])
-        
-        for stat in book_stats:
-           writer.writerow([stat.id, stat.title, stat.view_count])
 
-        response_data = BytesIO(si.getvalue().encode('utf-8'))
+        for stat in book_stats:
+            writer.writerow([stat.id, stat.title, stat.view_count])
+
+        response_data = BytesIO()
+        response_data.write(si.getvalue().encode('utf-8-sig'))
+        response_data.seek(0)
 
         response = send_file(
             response_data,
