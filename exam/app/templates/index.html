@@ -58,7 +58,7 @@
       {% for book in popular_books %}
         <div class="col-md-4">
           <div class="card mb-4">
-            <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги"></div>
+            <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id) }});" alt="Обложка книги"></div>
             <div class="card-body text-center">
               <h5 class="card-title">{{ book.title }}</h5>
               <p class="card-text">{{ book.genres }}</p>
@@ -75,7 +75,7 @@
         {% for book in recent_books %}
             <div class="col-md-4">
                 <div class="card mb-4">
-                    <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});" alt="Обложка книги"></div>
+                    <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id) }});" alt="Обложка книги"></div>
                     <div class="card-body text-center ">
                         <h5 class="card-title">{{ book.title }}</h5>
                         <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
@@ -97,7 +97,7 @@
     <div class="card-body">
       <div class="row">
         <div class="col-md-4 book-cover"
-          style="background-image: url({{ url_for('image', cover_id=book.cover_id) }});"></div>
+          style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id else 'default_cover.jpg') }});"></div>
         <div class="col-md-8">
           <h5 class="card-title"><strong>{{ book.title }}</strong></h5>
           <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>

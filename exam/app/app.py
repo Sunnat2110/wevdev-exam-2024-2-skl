@@ -8,11 +8,13 @@ import math
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import current_user
+import os
 
 app = Flask(__name__)
 application = app
 
 app.config.from_pyfile('config.py')
+
 
 db.init_app(app)
 migrate = Migrate(app, db)
