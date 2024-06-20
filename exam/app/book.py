@@ -1,24 +1,30 @@
 from flask import render_template, redirect, url_for, flash, request, Blueprint, abort, send_from_directory, send_file
-from werkzeug.utils import secure_filename
 from datetime import datetime
 from sqlalchemy import and_, func
 import os
-import hashlib
 import markdown
 from models import Book, Genre, BookGenre, Cover, Review, User, Visit, db
 from flask_login import login_required, current_user
-from bleach import clean as bleach_clean
-import mimetypes
+from bleach.sanitizer import Cleaner
 from auth import check_rights
 import csv
 from io import BytesIO, StringIO
+from tools import ImageSaver
+from sqlalchemy import func
+
 
 bp_book = Blueprint('book', __name__, url_prefix='/book')
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media', 'covers')
 
+ALLOWED_TAGS = ['p', 'b', 'i', 'u', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'blockquote', 'code', 'pre', 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+ALLOWED_ATTRIBUTES = {
+    '*': ['class'],
+    'a': ['href', 'title'],
+    'img': ['src', 'alt', 'title']
+}
 
-from sqlalchemy import func
+cleaner = Cleaner(tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES)
 
 @bp_book.route('/show/<int:book_id>')
 def show(book_id):
@@ -56,6 +62,7 @@ def show(book_id):
         .filter(Review.book_id == book_id).all()
 
         description_html = markdown.markdown(book_query.description)
+        description_cleaned = cleaner.clean(description_html)
 
         user_id = current_user.id if current_user.is_authenticated else None
         now = datetime.utcnow()
@@ -67,18 +74,16 @@ def show(book_id):
                 Visit.visit_time >= start_of_day
             )
         ).scalar()
-        
+
         if visit_count < 10:
             visit = Visit(user_id=user_id, book_id=book_id, visit_time=now)
             db.session.add(visit)
             db.session.commit()
 
-        return render_template('book/show.html', book=book_query, description_html=description_html, reviews=reviews, cover_img=cover_img)
+        return render_template('book/show.html', book=book_query, description_html=description_cleaned, reviews=reviews, cover_img=cover_img)
     except Exception as e:
         flash('Произошла ошибка при загрузке данных книги: {}'.format(str(e)), 'danger')
         return render_template('book/show.html', book=None, description_html='', reviews=[], cover_img=None)
-
-
 
 
 @bp_book.route('/add_book', methods=['GET', 'POST'])
@@ -92,47 +97,40 @@ def add():
         year = request.form['year']
         publisher = request.form['publisher']
         pages = request.form['pages']
-        description = bleach_clean(request.form['description'])
+        description_markdown = request.form['description']
         genres = request.form.getlist('genres')
-        
+
         cover = request.files['cover']
         cover_id = None
 
         if cover:
-            filename = secure_filename(cover.filename)
-            file_data = cover.read()
-            file_hash = hashlib.md5(file_data).hexdigest()
-            mime_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-            
-            existing_cover = Cover.query.filter_by(md5_hash=file_hash).first()
-            if existing_cover:
-                cover_id = existing_cover.id
-            else:
-                new_cover = Cover(file_name=filename, mime_type=mime_type, md5_hash=file_hash)
-                db.session.add(new_cover)
-                db.session.commit()
-                cover_id = new_cover.id
+            try:
+                image_saver = ImageSaver(cover)
+                cover_id = image_saver.save()
+            except Exception as e:
+                errors.append(f'Ошибка при сохранении обложки: {e}. Пожалуйста, попробуйте еще раз или обратитесь к администратору.')
+                return render_template('book/add_book.html', genres=Genre.query.all(), errors=errors)
 
-                cover_path = os.path.join(UPLOAD_FOLDER, f"{cover_id}_{filename}")
-                with open(cover_path, 'wb') as f:
-                    f.write(file_data)
-        
         try:
-            new_book = Book(title=title, author=author, year=year, publisher=publisher, pages=pages, description=description, cover_id=cover_id)
+            description_html = markdown.markdown(description_markdown)
+            description_cleaned = cleaner.clean(description_html)
+
+            new_book = Book(title=title, author=author, year=year, publisher=publisher, pages=pages, description=description_cleaned, cover_id=cover_id)
             db.session.add(new_book)
             db.session.commit()
 
             for genre_id in genres:
                 new_book_genre = BookGenre(book_id=new_book.id, genre_id=genre_id)
                 db.session.add(new_book_genre)
-            
+
             db.session.commit()
             flash('Книга успешно добавлена', 'success')
             return redirect(url_for('book.show', book_id=new_book.id))
         except Exception as e:
             db.session.rollback()
-            errors.append('При сохранении данных возникла ошибка. Проверьте корректность введённых данных.')
+            errors.append(f'При сохранении данных возникла ошибка: {e}. Проверьте корректность введённых данных.')
             return render_template('book/add_book.html', genres=Genre.query.all(), errors=errors)
+    
     return render_template('book/add_book.html', genres=Genre.query.all(), errors=[])
 
 
@@ -149,10 +147,13 @@ def edit(book_id):
         book.year = request.form['year']
         book.publisher = request.form['publisher']
         book.pages = request.form['pages']
-        book.description = bleach_clean(request.form['description'])
+        description_markdown = request.form['description']
         genres = request.form.getlist('genres')
 
         try:
+            description_html = markdown.markdown(description_markdown)
+            book.description = cleaner.clean(description_html)
+
             db.session.commit()
             BookGenre.query.filter_by(book_id=book.id).delete()
             for genre_id in genres:
@@ -176,15 +177,18 @@ def write_review(book_id):
 
     if request.method == 'POST':
         rating = request.form['rating']
-        text = bleach_clean(request.form['text'])
+        text = request.form['text']
 
         existing_review = Review.query.filter_by(book_id=book_id, user_id=current_user.id).first()
         if existing_review:
             flash('Вы уже писали рецензию на эту книгу.', 'danger')
             return redirect(url_for('book.show', book_id=book_id))
 
-        new_review = Review(rating=rating, text=text, book_id=book_id, user_id=current_user.id)
         try:
+            text_html = markdown.markdown(text)
+            text_cleaned = cleaner.clean(text_html)
+
+            new_review = Review(rating=rating, text=text_cleaned, book_id=book_id, user_id=current_user.id)
             db.session.add(new_review)
             db.session.commit()
             flash('Рецензия успешно добавлена.', 'success')
@@ -399,5 +403,5 @@ def export_book_stats_csv():
 def image(cover_id):
     cover = Cover.query.get(cover_id)
     if cover is None:
-        abort(404)
+        flash('Произошла ошибка при добавлении обложки')
     return send_from_directory(UPLOAD_FOLDER, cover.file_name)

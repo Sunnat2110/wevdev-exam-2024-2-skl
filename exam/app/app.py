@@ -8,7 +8,10 @@ import math
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import current_user
-import os
+from book import cleaner
+from bleach.sanitizer import Cleaner
+import markdown
+
 
 app = Flask(__name__)
 application = app
@@ -89,7 +92,7 @@ def index(page=1):
                 Book.title,
                 Book.cover_id
             ).join(Visit).order_by(Visit.visit_time.desc()).limit(5).all()
-
+            
         user_roles = get_user_roles()
 
         return render_template('index.html', books=books, page=page, total_pages=total_pages, user_roles=user_roles, popular_books=popular_books, recent_books=recent_books)
@@ -102,7 +105,7 @@ def index(page=1):
 def image(cover_id):
     cover = Cover.query.get(cover_id)
     if cover is None:
-        abort(404)
+        flash('Произошла ошибка при добавлении обложки')
     return send_from_directory(app.config['UPLOAD_FOLDER'], cover.file_name)
 
 if __name__ == '__main__':

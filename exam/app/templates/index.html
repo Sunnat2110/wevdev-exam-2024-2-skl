@@ -106,7 +106,7 @@
           <p class="card-text"><strong>Издательство:</strong> {{ book.publisher }}</p>
           <p class="card-text"><strong>Средняя оценка:</strong> {{ "%.2f"|format(book.avg_rating) if book.avg_rating else "Нет оценок" }}</p>
           <p class="card-text"><strong>Количество рецензий:</strong> {{ book.review_count }}</p>
-          <p class="card-text"><strong>Описание:</strong> {{ book.description }}</p>
+          <p class="card-text"><strong>Описание:</strong> {{ book.description|safe }}</p>
         </div>
       </div>
       <div class="row d-flex justify-content-end">
