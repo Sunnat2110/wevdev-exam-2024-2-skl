@@ -29,7 +29,6 @@ class User(db.Model, UserMixin):
     first_name = db.Column(db.String(50))
     middle_name = db.Column(db.String(50))
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id', ondelete='CASCADE'), nullable=False)
-    visits = db.relationship('Visit', back_populates='user')
 
     def __repr__(self):
         return '<User: %r>' % self.login
@@ -57,9 +56,9 @@ class User(db.Model, UserMixin):
 class Cover(db.Model):
     __tablename__ = 'covers'
     id = db.Column(db.Integer, primary_key=True)
-    file_name = db.Column(db.String(50), nullable=False)
-    mime_type = db.Column(db.String(100), nullable=False)
-    md5_hash = db.Column(db.String(150), nullable=False)
+    file_name = db.Column(db.String(128))
+    mime_type = db.Column(db.String(128))
+    md5_hash = db.Column(db.String(32))
 
     def __repr__(self):
         return '<Cover: %r>' % self.file_name
@@ -84,7 +83,6 @@ class Book(db.Model):
     author = db.Column(db.String(255), nullable=False)
     pages = db.Column(db.Integer, nullable=False)
     cover_id = db.Column(db.Integer, db.ForeignKey('covers.id', ondelete='CASCADE'), nullable=True)
-    visits = relationship('Visit', back_populates='book')
 
 
     def __repr__(self):
@@ -95,8 +93,6 @@ class BookGenre(db.Model):
     book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), primary_key=True)
     genre_id = db.Column(db.Integer, db.ForeignKey('genres.id', ondelete='CASCADE'), primary_key=True)
 
-    book = db.relationship('Book')
-    genre = db.relationship('Genre')
 
 class Review(db.Model):
     __tablename__ = 'reviews'
@@ -133,9 +129,6 @@ class Role(db.Model):
 class Visit(db.Model):
     __tablename__ = 'visits'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     visit_time = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship('User', backref=db.backref('visit_logs', lazy=True))
-    book = db.relationship('Book', backref=db.backref('visit_logs', lazy=True))

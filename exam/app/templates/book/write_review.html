@@ -29,4 +29,9 @@
     </div>
     {% endif %}
 </form>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script>
+    const easyMDE = new EasyMDE({element: document.getElementById('text')});
+</script>
 {% endblock %}
