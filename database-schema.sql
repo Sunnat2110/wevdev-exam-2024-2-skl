@@ -65,7 +65,7 @@ CREATE TABLE `books` (
   PRIMARY KEY (`id`),
   KEY `fk_books_cover_id_covers` (`cover_id`),
   CONSTRAINT `fk_books_cover_id_covers` FOREIGN KEY (`cover_id`) REFERENCES `covers` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -77,11 +77,11 @@ DROP TABLE IF EXISTS `covers`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `covers` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `file_name` varchar(50) NOT NULL,
-  `mime_type` varchar(100) NOT NULL,
-  `md5_hash` varchar(150) NOT NULL,
+  `file_name` varchar(128) DEFAULT NULL,
+  `mime_type` varchar(128) DEFAULT NULL,
+  `md5_hash` varchar(32) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -118,7 +118,7 @@ CREATE TABLE `reviews` (
   KEY `fk_reviews_book_id_books` (`book_id`),
   CONSTRAINT `fk_reviews_book_id_books` FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_reviews_user_id_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -171,11 +171,11 @@ CREATE TABLE `visits` (
   `book_id` int(11) NOT NULL,
   `visit_time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
+  KEY `fk_visits_user_id_users` (`user_id`),
   KEY `fk_visits_book_id_books` (`book_id`),
-  CONSTRAINT `fk_visits_book_id_books` FOREIGN KEY (`book_id`) REFERENCES `books` (`id`),
-  CONSTRAINT `visits_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8;
+  CONSTRAINT `fk_visits_book_id_books` FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_visits_user_id_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -187,4 +187,4 @@ CREATE TABLE `visits` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-06-15 21:59:21
+-- Dump completed on 2024-06-20  3:27:34
