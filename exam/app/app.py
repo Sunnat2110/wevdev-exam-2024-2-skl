@@ -9,9 +9,6 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import current_user
 from book import cleaner
-from bleach.sanitizer import Cleaner
-import markdown
-
 
 app = Flask(__name__)
 application = app
