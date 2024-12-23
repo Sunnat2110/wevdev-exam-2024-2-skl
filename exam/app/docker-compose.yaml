@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "5100:5100"  # Проброс порта для приложения
+    volumes:
+      - ./media:/app/media  # Подключение директории для статических файлов
+    depends_on:
+      - db  # Зависимость от базы данных
+    environment:
+      SQLALCHEMY_DATABASE_URI: "mysql+mysqlconnector://std_2533_exam:12345678@db:3306/std_2533_exam"
+      SECRET_KEY: "f038a541489b89f81762d12edfdd03835ceea10cfb3cdbdabfbfa0f48b0d4802"
+      UPLOAD_FOLDER: "/app/media/covers"
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"  # Проброс порта для MySQL
+    volumes:
+      - db_data:/var/lib/mysql  # Подключение директории для данных БД
+    environment:
+      MYSQL_ROOT_PASSWORD: "root_password"
+      MYSQL_DATABASE: "std_2533_exam"
+      MYSQL_USER: "std_2533_exam"
+      MYSQL_PASSWORD: "12345678"
+
+volumes:
+  db_data:
