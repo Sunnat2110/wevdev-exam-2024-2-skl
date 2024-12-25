@@ -13,7 +13,7 @@ def client():
             db.create_all()  # Создаём все таблицы в базе данных
         yield client
         with app.app_context():
-            db.session.remove()  # Закрываем сессию после теста
+            db.session.remove()
 
 @pytest.fixture(autouse=True)
 def rollback():
