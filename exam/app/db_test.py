@@ -38,7 +38,7 @@ def test_user_authentication(client):
         # Проверяем, существует ли пользователь с таким логином
         existing_user = User.query.filter_by(login="user1").first()
         if existing_user:
-            db.session.delete(existing_user)  # Удаляем если существует
+            db.session.delete(existing_user)
             db.session.commit()
 
         # Создаём новый хэш пароля
