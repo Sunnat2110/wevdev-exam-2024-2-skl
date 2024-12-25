@@ -14,7 +14,6 @@ def client():
         yield client
         with app.app_context():
             db.session.remove()  # Закрываем сессию после теста
-            # Очищаем базу данных после теста, но не удаляем все таблицы
 
 @pytest.fixture(autouse=True)
 def rollback():
