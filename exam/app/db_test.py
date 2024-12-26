@@ -6,4 +6,3 @@ def test_add():
 
 def test_add1():
 	return add1(3, 2) == 1, "user1 is in the db, authorization test is over"
-feature
