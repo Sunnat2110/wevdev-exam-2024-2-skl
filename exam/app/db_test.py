@@ -1,5 +1,5 @@
 from utils import add
-from main impord add1
+from main import add1
 
 def test_add():
 	assert add(2, 3) == 5, "db is reachable, select test is over"
