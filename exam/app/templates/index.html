@@ -4,16 +4,18 @@
 {% block content %}
 <main class="main">
   <div class="about text-center">
-    <h1>Добро пожаловать на сайт MedApp!</h1>
+    <h1>Добро пожаловать в нашу электронную библиотеку!</h1>
+    <p>Мы рады приветствовать вас в нашей электронной библиотеке, где вы найдете богатую коллекцию книг на любой
+      вкус. Наша библиотека создана для того, чтобы сделать чтение доступным, удобным и увлекательным.</p>
   </div>
-  <div class="container about-image" style="background-image: url({{ url_for('static', filename='images/bg-image.jpg') }});"></div>
+  <div class="container about-image"
+    style="background-image: url({{ url_for('static', filename='images/bg-image.jpg') }});"></div>
   <hr class="heading-line mx-auto">
   <div class="adventages">
     <section>
       <div class="container">
         <h2 class="text-center">Преимущества нашей библиотеки</h2>
         <div class="row text-center">
-          Преимущества
           <div class="col-lg-4">
             <img src="{{ url_for('static', filename='images/award-fill.svg') }}" alt="advantage-icon">
             <p>Широкий ассортимент книг:<strong> В нашей библиотеке представлено множество жанров и авторов,
@@ -49,40 +51,46 @@
     </section>
   </div>
 
-<hr class="heading-line mx-auto">
+  <hr class="heading-line mx-auto">
   <div class="container mt-3">
     <h2 class="text-center">Популярные книги</h2>
     <div class="row">
       {% for book in popular_books %}
-        <div class="col-md-4">
-          <div class="card mb-4">
-            <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id) }});" alt="Обложка книги"></div>
-            <div class="card-body text-center">
-              <h5 class="card-title">{{ book.title }}</h5>
-              <p class="card-text">{{ book.genres }}</p>
-              <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
-            </div>
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-img-top popular-book-cover"
+            style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id) }});"
+            alt="Обложка книги"></div>
+          <div class="card-body text-center">
+            <h5 class="card-title">{{ book.title }}</h5>
+            <p class="card-text">{{ book.genres }}</p>
+            <a href="{{ url_for('book.show', book_id=book.id) }}"
+              class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
           </div>
         </div>
+      </div>
       {% endfor %}
     </div>
     {% if recent_books %}
     <hr class="heading-line mx-auto">
     <h2 class="text-center">Недавно просмотренные книги</h2>
     <div class="row">
-        {% for book in recent_books %}
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-img-top popular-book-cover" style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id) }});" alt="Обложка книги"></div>
-                    <div class="card-body text-center ">
-                        <h5 class="card-title">{{ book.title }}</h5>
-                        <a href="{{ url_for('book.show', book_id=book.id) }}" class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
-                    </div>
-                </div>
-            </div>
-        {% endfor %}
+      {% for book in recent_books %}
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-img-top popular-book-cover"
+            style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id) }});"
+            alt="Обложка книги"></div>
+          <div class="card-body text-center ">
+            <h5 class="card-title">{{ book.title }}</h5>
+            <a href="{{ url_for('book.show', book_id=book.id) }}"
+              class="btn btn-secondary bg-dark bg-gradient">Просмотр</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
     </div>
-{% endif %}
+    {% endif %}
   </div>
 
   <hr class="heading-line mx-auto">
@@ -90,65 +98,69 @@
     <h2 class="text-center">Список книг</h2>
     <div class="row">
       {% for book in books %}
-<div class="col-md-12">
-  <div class="card mb-4 d-flex flex-row">
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-4 book-cover"
-          style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id else 'default_cover.jpg') }});"></div>
-        <div class="col-md-8">
-          <h5 class="card-title"><strong>{{ book.title }}</strong></h5>
-          <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>
-          <p class="card-text"><strong>Год:</strong> {{ book.year }}</p>
-          <p class="card-text"><strong>Жанр:</strong> {{ book.genres }}</p>
-          <p class="card-text"><strong>Издательство:</strong> {{ book.publisher }}</p>
-          <p class="card-text"><strong>Средняя оценка:</strong> {{ "%.2f"|format(book.avg_rating) if book.avg_rating else "Нет оценок" }}</p>
-          <p class="card-text"><strong>Количество рецензий:</strong> {{ book.review_count }}</p>
-          <p class="card-text"><strong>Описание:</strong> {{ book.description|safe }}</p>
+      <div class="col-md-12">
+        <div class="card mb-4 d-flex flex-row">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 book-cover"
+                style="background-image: url({{ url_for('image', cover_id=book.cover_id if book.cover_id else 'default_cover.jpg') }});">
+              </div>
+              <div class="col-md-8">
+                <h5 class="card-title"><strong>{{ book.title }}</strong></h5>
+                <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>
+                <p class="card-text"><strong>Год:</strong> {{ book.year }}</p>
+                <p class="card-text"><strong>Жанр:</strong> {{ book.genres }}</p>
+                <p class="card-text"><strong>Издательство:</strong> {{ book.publisher }}</p>
+                <p class="card-text"><strong>Средняя оценка:</strong> {{ "%.2f"|format(book.avg_rating) if
+                  book.avg_rating else "Нет оценок" }}</p>
+                <p class="card-text"><strong>Количество рецензий:</strong> {{ book.review_count }}</p>
+                <p class="card-text"><strong>Описание:</strong> {{ book.description|safe }}</p>
+              </div>
+            </div>
+            <div class="row d-flex justify-content-end">
+              <div class="col-md-4 d-flex justify-content-center gap-2">
+                <a class="btn btn-secondary bg-dark bg-gradient"
+                  href="{{ url_for('book.show', book_id=book.id) }}">Просмотр</a>
+                {% if current_user.is_authenticated %}
+                {% if current_user.can('edit') %}
+                <a class="btn btn-secondary bg-dark bg-gradient"
+                  href="{{ url_for('book.edit', book_id=book.id) }}">Редактировать</a>
+                {% endif %}
+                {% if current_user.can('delete') %}
+                <button type="button" class="btn btn-danger" data-toggle="modal"
+                  data-target="#deleteModal_{{ book.id }}">
+                  Удалить
+                </button>
+                {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="row d-flex justify-content-end">
-        <div class="col-md-4 d-flex justify-content-center gap-2">
-          <a class="btn btn-secondary bg-dark bg-gradient"
-            href="{{ url_for('book.show', book_id=book.id) }}">Просмотр</a>
-          {% if current_user.is_authenticated %}
-          {% if current_user.can('edit') %}
-          <a class="btn btn-secondary bg-dark bg-gradient"
-            href="{{ url_for('book.edit', book_id=book.id) }}">Редактировать</a>
-          {% endif %}
-          {% if current_user.can('delete') %}
-          <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal_{{ book.id }}">
-              Удалить
-          </button>
-          {% endif %}
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- Модальное окно для подтверждения удаления -->
-<div class="modal fade" id="deleteModal_{{ book.id }}" tabindex="-1" role="dialog"
-  aria-labelledby="deleteModalLabel_{{ book.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="deleteModalLabel_{{ book.id }}">Удаление книги <strong>{{ book.title }}</strong></h5>
+      <!-- Модальное окно для подтверждения удаления -->
+      <div class="modal fade" id="deleteModal_{{ book.id }}" tabindex="-1" role="dialog"
+        aria-labelledby="deleteModalLabel_{{ book.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="deleteModalLabel_{{ book.id }}">Удаление книги <strong>{{ book.title
+                  }}</strong></h5>
+            </div>
+            <div class="modal-body">
+              Вы уверены, что хотите удалить книгу "{{ book.title }}"?
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary bg-dark bg-gradient" data-dismiss="modal">Нет</button>
+              <form action="{{ url_for('book.delete', book_id=book.id) }}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-danger">Да</button>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="modal-body">
-        Вы уверены, что хотите удалить книгу "{{ book.title }}"?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary bg-dark bg-gradient" data-dismiss="modal">Нет</button>
-        <form action="{{ url_for('book.delete', book_id=book.id) }}" method="post" style="display:inline;">
-          <button type="submit" class="btn btn-danger">Да</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-{% endfor %}
+      {% endfor %}
 
     </div>
 
